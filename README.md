@@ -12,7 +12,7 @@ This library has a single implementation, but with two public facing API's.
 are prefixed with `mgos_` to conform with naming conventions for that
 platform.
 
-Contributions are welcome, please see [CONTRIBUTIONS.md](CONTRIBUTIONS.md)
+Contributions are welcome, please see [CONTRIBUTING.md](CONTRIBUTING.md)
 for more information.
 
 ## Building
