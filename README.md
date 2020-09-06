@@ -5,7 +5,7 @@
 This project aims to provide complete decode implementation of the
 [RDS/RBDS](https://en.wikipedia.org/wiki/Radio_Data_System) protocol
 as defined by the
-[RBDS Specicification](http://www.interactive-radio-system.com/docs/rbds1998.pdf).
+[RBDS Specification](http://www.interactive-radio-system.com/docs/rbds1998.pdf).
 
 This library has a single implementation, but with two public facing API's.
 [Mongoose OS](https://mongoose-os.com/) is supported, but all functions
