@@ -1,5 +1,6 @@
 author: Chris Mumford
 description: RDS decoding library.
+type: lib
 version: 0.9
 
 sources:
