@@ -256,6 +256,23 @@ struct rds_pic {
 };
 
 /**
+ * Radiotext (RT) decoded data.
+ */
+struct rds_rt {
+  uint8_t display[64];  ///< Radiotext text to display.
+  struct {
+    uint8_t hi_prob[64];      ///< Temporary Radiotext (high probability).
+    uint8_t lo_prob[64];      ///< Temporary Radiotext (low probability).
+    uint8_t hi_prob_cnt[64];  ///< Hit count of high probability Radiotext.
+  } pvt;                      ///< RT decoder private data.
+};
+
+enum rds_rt_text {
+  RT_A,  ///< RT block A is current.
+  RT_B,  ///< RT block B is current.
+};
+
+/**
  * RDS (Radio Data System) data.
  *
  * This contains all data extracted from the RDS data stream. Some data, like
@@ -281,17 +298,10 @@ struct rds_data {
   } ps;                        ///< The Program Service data.
 
   struct {
-    uint8_t display[64];  ///< Radiotext text to display.
-    struct {
-      uint8_t hi_prob[64];      ///< Temporary Radiotext (high probability).
-      uint8_t lo_prob[64];      ///< Temporary Radiotext (low probability).
-      uint8_t hi_prob_cnt[64];  ///< Hit count of high probability Radiotext.
-      bool flag;                ///< Radiotext A/B flag.
-      bool flag_valid;          ///< Radiotext A/B flag is valid.
-      bool saved_flag;          ///< Saved Radiotext A/B flag.
-      bool saved_flag_valid;    ///< Saved Radiotext A/B flag is valid.
-    } pvt;                      ///< RT decoder private data.
-  } rt;                         ///< The Radiotext data.
+    struct rds_rt a;             ///< RT A text.
+    struct rds_rt b;             ///< RT B text.
+    enum rds_rt_text decode_rt;  ///< Which RT text currently being decoded.
+  } rt;                          ///< The Radiotext data.
 
   struct {
     bool day_high;      ///< Modified Julian Day high bit.

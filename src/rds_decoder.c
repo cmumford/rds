@@ -148,22 +148,12 @@ static void decode_ms(struct rds_data* rds, const struct rds_block* block) {
  *
  * Does no additional error detection.
  */
-static void update_rt_simple(struct rds_data* rds,
+static void update_rt_simple(struct rds_rt* rt,
                              const struct rds_blocks* blocks,
-                             bool abFlag,
                              uint8_t count,
                              uint8_t addr,
                              uint8_t* chars) {
   uint8_t i;
-
-  // If the A/B flag changes, wipe out the rest of the text.
-  if ((abFlag != rds->rt.pvt.saved_flag) && rds->rt.pvt.saved_flag_valid) {
-    for (i = addr; i < ARRAY_SIZE(rds->rt.display); i++)
-      rds->rt.display[i] = 0;
-  }
-  rds->rt.pvt.saved_flag = abFlag;      // Save the A/B flag.
-  rds->rt.pvt.saved_flag_valid = true;  // Now the A/B flag is valid.
-
   for (i = 0; i < count; i++) {
     // Choose the appropriate block. Count > 2 check is necessary for 2B groups.
     uint8_t errCount;
@@ -178,12 +168,12 @@ static void update_rt_simple(struct rds_data* rds,
 
     if (errCount <= blerMax) {
       // Store the data in our temporary array.
-      rds->rt.display[addr + i] = chars[i];
+      rt->display[addr + i] = chars[i];
       if (chars[i] == 0x0d) {
         // The end of message character has been received.
         // Wipe out the rest of the text.
-        for (uint8_t j = addr + i + 1; j < ARRAY_SIZE(rds->rt.display); j++) {
-          rds->rt.display[j] = 0;
+        for (uint8_t j = addr + i + 1; j < ARRAY_SIZE(rt->display); j++) {
+          rt->display[j] = 0;
         }
         break;
       }
@@ -192,9 +182,26 @@ static void update_rt_simple(struct rds_data* rds,
 
   // Any null character before this should become a space.
   for (i = 0; i < addr; i++) {
-    if (!rds->rt.display[i])
-      rds->rt.display[i] = ' ';
+    if (!rt->display[i])
+      rt->display[i] = ' ';
   }
+}
+
+static void bump_rt_validation_count(struct rds_rt* rt) {
+  uint8_t i;
+  for (i = 0; i < ARRAY_SIZE(rt->pvt.hi_prob_cnt); i++) {
+    if (!rt->pvt.hi_prob[i]) {
+      rt->pvt.hi_prob[i] = ' ';
+      rt->pvt.hi_prob_cnt[i]++;
+    }
+  }
+  for (i = 0; i < ARRAY_SIZE(rt->pvt.hi_prob_cnt); i++)
+    rt->pvt.hi_prob_cnt[i]++;
+
+  // Wipe out the cached text.
+  memset(rt->pvt.hi_prob_cnt, 0, sizeof(rt->pvt.hi_prob_cnt));
+  memset(rt->pvt.hi_prob, 0, sizeof(rt->pvt.hi_prob));
+  memset(rt->pvt.lo_prob, 0, sizeof(rt->pvt.lo_prob));
 }
 
 /**
@@ -204,38 +211,13 @@ static void update_rt_simple(struct rds_data* rds,
  * correct the data by making sure that the data has been identical for
  * multiple receptions of each byte.
  */
-static void update_rt_advance(struct rds_data* rds,
+static void update_rt_advance(struct rds_rt* rt,
                               const struct rds_blocks* blocks,
-                              bool abFlag,
                               uint8_t count,
                               uint8_t addr,
                               uint8_t* byte) {
   uint8_t i;
   bool text_changing = false;  // Indicates if the Radiotext is changing.
-
-  const bool kIgnoreAB = false;
-
-  if (abFlag != rds->rt.pvt.flag && rds->rt.pvt.flag_valid && !kIgnoreAB) {
-    // If the A/B message flag changes, try to force a display
-    // by increasing the validation count of each byte
-    // and stuffing a space in place of every NUL char
-    for (i = 0; i < ARRAY_SIZE(rds->rt.pvt.hi_prob_cnt); i++) {
-      if (!rds->rt.pvt.hi_prob[i]) {
-        rds->rt.pvt.hi_prob[i] = ' ';
-        rds->rt.pvt.hi_prob_cnt[i]++;
-      }
-    }
-    for (i = 0; i < ARRAY_SIZE(rds->rt.pvt.hi_prob_cnt); i++)
-      rds->rt.pvt.hi_prob_cnt[i]++;
-
-    // Wipe out the cached text.
-    memset(rds->rt.pvt.hi_prob_cnt, 0, sizeof(rds->rt.pvt.hi_prob_cnt));
-    memset(rds->rt.pvt.hi_prob, 0, sizeof(rds->rt.pvt.hi_prob));
-    memset(rds->rt.pvt.lo_prob, 0, sizeof(rds->rt.pvt.lo_prob));
-  }
-
-  rds->rt.pvt.flag = abFlag;   // Save the A/B flag.
-  rds->rt.pvt.flag_valid = 1;  // Our copy of the A/B flag is now valid.
 
   for (i = 0; i < count; i++) {
     uint8_t errCount;
@@ -253,48 +235,48 @@ static void update_rt_advance(struct rds_data* rds,
         byte[i] = ' ';  // translate nulls to spaces.
 
       // The new byte matches the high probability byte.
-      if (rds->rt.pvt.hi_prob[addr + i] == byte[i]) {
-        if (rds->rt.pvt.hi_prob_cnt[addr + i] < RT_VALIDATE_LIMIT) {
-          rds->rt.pvt.hi_prob_cnt[addr + i]++;
+      if (rt->pvt.hi_prob[addr + i] == byte[i]) {
+        if (rt->pvt.hi_prob_cnt[addr + i] < RT_VALIDATE_LIMIT) {
+          rt->pvt.hi_prob_cnt[addr + i]++;
         } else {
           // we have received this byte enough to max out our counter and push
           // it into the low probability array as well.
-          rds->rt.pvt.hi_prob_cnt[addr + i] = RT_VALIDATE_LIMIT;
-          rds->rt.pvt.lo_prob[addr + i] = byte[i];
+          rt->pvt.hi_prob_cnt[addr + i] = RT_VALIDATE_LIMIT;
+          rt->pvt.lo_prob[addr + i] = byte[i];
         }
-      } else if (rds->rt.pvt.lo_prob[addr + i] == byte[i]) {
+      } else if (rt->pvt.lo_prob[addr + i] == byte[i]) {
         // The new byte is a match with the low probability byte. Swap them,
         // reset the counter and flag the text as in transition. Note that the
         // counter for this character goes higher than the validation limit
-        // because it will get knocked down later
-        if (rds->rt.pvt.hi_prob_cnt[addr + i] >= RT_VALIDATE_LIMIT) {
+        // because it will get knocked down later.
+        if (rt->pvt.hi_prob_cnt[addr + i] >= RT_VALIDATE_LIMIT) {
           text_changing = true;
-          rds->rt.pvt.hi_prob_cnt[addr + i] = RT_VALIDATE_LIMIT + 1;
+          rt->pvt.hi_prob_cnt[addr + i] = RT_VALIDATE_LIMIT + 1;
         } else {
-          rds->rt.pvt.hi_prob_cnt[addr + i] = RT_VALIDATE_LIMIT;
+          rt->pvt.hi_prob_cnt[addr + i] = RT_VALIDATE_LIMIT;
         }
-        rds->rt.pvt.lo_prob[addr + i] = rds->rt.pvt.hi_prob[addr + i];
-        rds->rt.pvt.hi_prob[addr + i] = byte[i];
-      } else if (!rds->rt.pvt.hi_prob_cnt[addr + i]) {
-        // The new byte is replacing an empty byte in the high
-        // proability array
-        rds->rt.pvt.hi_prob[addr + i] = byte[i];
-        rds->rt.pvt.hi_prob_cnt[addr + i] = 1;
+        rt->pvt.lo_prob[addr + i] = rt->pvt.hi_prob[addr + i];
+        rt->pvt.hi_prob[addr + i] = byte[i];
+      } else if (!rt->pvt.hi_prob_cnt[addr + i]) {
+        // The new byte is replacing an empty byte in the high proability array.
+        rt->pvt.hi_prob[addr + i] = byte[i];
+        rt->pvt.hi_prob_cnt[addr + i] = 1;
       } else {
         // The new byte doesn't match anything, put it in the low probability
         // array.
-        rds->rt.pvt.lo_prob[addr + i] = byte[i];
+        rt->pvt.lo_prob[addr + i] = byte[i];
       }
     }
   }
 
-  if (text_changing) {
-    // When the text is changing, decrement the count for all characters to
-    // prevent displaying part of a message that is in transition.
-    for (i = 0; i < ARRAY_SIZE(rds->rt.pvt.hi_prob_cnt); i++) {
-      if (rds->rt.pvt.hi_prob_cnt[i] > 1)
-        rds->rt.pvt.hi_prob_cnt[i]--;
-    }
+  if (!text_changing)
+    return;
+
+  // When the text is changing, decrement the count for all characters to
+  // prevent displaying part of a message that is in transition.
+  for (i = 0; i < ARRAY_SIZE(rt->pvt.hi_prob_cnt); i++) {
+    if (rt->pvt.hi_prob_cnt[i] > 1)
+      rt->pvt.hi_prob_cnt[i]--;
   }
 }
 
@@ -557,41 +539,48 @@ static void decode_group_type_1(const struct rds_decoder* decoder,
 static void decode_group_type_2(const struct rds_decoder* decoder,
                                 const struct rds_group_type gt,
                                 const struct rds_blocks* blocks) {
-  uint8_t rtblocks[4];
+  uint8_t rtchars[4];
 
-  const bool abflag = (blocks->b.val & 0x0010) >> 4;
+  enum rds_rt_text decode_rt = (blocks->b.val & 0x0010) >> 4 ? RT_A : RT_B;
+  struct rds_rt* rt =
+      decode_rt == RT_A ? &decoder->rds->rt.a : &decoder->rds->rt.b;
 
   if (gt.version == 'A') {
     if (blocks->c.errors > BLERC_MAX || blocks->d.errors > BLERD_MAX)
       return;
-    rtblocks[0] = (uint8_t)(blocks->c.val >> 8);
-    rtblocks[1] = (uint8_t)(blocks->c.val & 0xFF);
-    rtblocks[2] = (uint8_t)(blocks->d.val >> 8);
-    rtblocks[3] = (uint8_t)(blocks->d.val & 0xFF);
+    rtchars[0] = (uint8_t)(blocks->c.val >> 8);
+    rtchars[1] = (uint8_t)(blocks->c.val & 0xFF);
+    rtchars[2] = (uint8_t)(blocks->d.val >> 8);
+    rtchars[3] = (uint8_t)(blocks->d.val & 0xFF);
 
     const uint8_t addr = (blocks->b.val & 0xf) * 4;
 
-    update_rt_simple(decoder->rds, blocks, abflag, 4, addr, rtblocks);
-    update_rt_advance(decoder->rds, blocks, abflag, 4, addr, rtblocks);
+    update_rt_simple(rt, blocks, 4, addr, rtchars);
+    if (decoder->rds->rt.decode_rt != decode_rt)
+      bump_rt_validation_count(rt);
+    update_rt_advance(rt, blocks, 4, addr, rtchars);
   } else {
     if (blocks->d.errors > BLERD_MAX)
       return;
-    rtblocks[0] = (uint8_t)(blocks->d.val >> 8);
-    rtblocks[1] = (uint8_t)(blocks->d.val & 0xFF);
-    rtblocks[2] = 0;
-    rtblocks[3] = 0;
+    rtchars[0] = (uint8_t)(blocks->d.val >> 8);
+    rtchars[1] = (uint8_t)(blocks->d.val & 0xFF);
+    rtchars[2] = 0;
+    rtchars[3] = 0;
 
     const uint8_t addr = (blocks->b.val & 0xf) * 2;
 
     // The last 32 bytes are unused in this format.
-    decoder->rds->rt.display[32] = 0x0d;
-    decoder->rds->rt.pvt.hi_prob[32] = 0x0d;
-    decoder->rds->rt.pvt.lo_prob[32] = 0x0d;
-    decoder->rds->rt.pvt.hi_prob_cnt[32] = RT_VALIDATE_LIMIT;
+    rt->display[32] = 0x0d;
+    rt->pvt.hi_prob[32] = 0x0d;
+    rt->pvt.lo_prob[32] = 0x0d;
+    rt->pvt.hi_prob_cnt[32] = RT_VALIDATE_LIMIT;
 
-    update_rt_simple(decoder->rds, blocks, abflag, 2, addr, rtblocks);
-    update_rt_advance(decoder->rds, blocks, abflag, 2, addr, rtblocks);
+    update_rt_simple(rt, blocks, 2, addr, rtchars);
+    if (decoder->rds->rt.decode_rt != decode_rt)
+      bump_rt_validation_count(rt);
+    update_rt_advance(rt, blocks, 2, addr, rtchars);
   }
+  decoder->rds->rt.decode_rt = decode_rt;
   SET_BITS(decoder->rds->valid_values, RDS_RT);
 #if defined(RDS_DEV)
   decoder->rds->stats.counts[PKTCNT_RT]++;
