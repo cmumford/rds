@@ -157,12 +157,12 @@ static void update_rt_simple(struct rds_data* rds,
   uint8_t i;
 
   // If the A/B flag changes, wipe out the rest of the text.
-  if ((abFlag != rds->rt.saved_flag) && rds->rt.saved_flag_valid) {
+  if ((abFlag != rds->rt.pvt.saved_flag) && rds->rt.pvt.saved_flag_valid) {
     for (i = addr; i < ARRAY_SIZE(rds->rt.display); i++)
       rds->rt.display[i] = 0;
   }
-  rds->rt.saved_flag = abFlag;      // Save the A/B flag.
-  rds->rt.saved_flag_valid = true;  // Now the A/B flag is valid.
+  rds->rt.pvt.saved_flag = abFlag;      // Save the A/B flag.
+  rds->rt.pvt.saved_flag_valid = true;  // Now the A/B flag is valid.
 
   for (i = 0; i < count; i++) {
     // Choose the appropriate block. Count > 2 check is necessary for 2B groups.
@@ -215,27 +215,27 @@ static void update_rt_advance(struct rds_data* rds,
 
   const bool kIgnoreAB = false;
 
-  if (abFlag != rds->rt.flag && rds->rt.flag_valid && !kIgnoreAB) {
+  if (abFlag != rds->rt.pvt.flag && rds->rt.pvt.flag_valid && !kIgnoreAB) {
     // If the A/B message flag changes, try to force a display
     // by increasing the validation count of each byte
     // and stuffing a space in place of every NUL char
-    for (i = 0; i < ARRAY_SIZE(rds->rt.hi_prob_cnt); i++) {
-      if (!rds->rt.hi_prob[i]) {
-        rds->rt.hi_prob[i] = ' ';
-        rds->rt.hi_prob_cnt[i]++;
+    for (i = 0; i < ARRAY_SIZE(rds->rt.pvt.hi_prob_cnt); i++) {
+      if (!rds->rt.pvt.hi_prob[i]) {
+        rds->rt.pvt.hi_prob[i] = ' ';
+        rds->rt.pvt.hi_prob_cnt[i]++;
       }
     }
-    for (i = 0; i < ARRAY_SIZE(rds->rt.hi_prob_cnt); i++)
-      rds->rt.hi_prob_cnt[i]++;
+    for (i = 0; i < ARRAY_SIZE(rds->rt.pvt.hi_prob_cnt); i++)
+      rds->rt.pvt.hi_prob_cnt[i]++;
 
     // Wipe out the cached text.
-    memset(rds->rt.hi_prob_cnt, 0, sizeof(rds->rt.hi_prob_cnt));
-    memset(rds->rt.hi_prob, 0, sizeof(rds->rt.hi_prob));
-    memset(rds->rt.lo_prob, 0, sizeof(rds->rt.lo_prob));
+    memset(rds->rt.pvt.hi_prob_cnt, 0, sizeof(rds->rt.pvt.hi_prob_cnt));
+    memset(rds->rt.pvt.hi_prob, 0, sizeof(rds->rt.pvt.hi_prob));
+    memset(rds->rt.pvt.lo_prob, 0, sizeof(rds->rt.pvt.lo_prob));
   }
 
-  rds->rt.flag = abFlag;   // Save the A/B flag.
-  rds->rt.flag_valid = 1;  // Our copy of the A/B flag is now valid.
+  rds->rt.pvt.flag = abFlag;   // Save the A/B flag.
+  rds->rt.pvt.flag_valid = 1;  // Our copy of the A/B flag is now valid.
 
   for (i = 0; i < count; i++) {
     uint8_t errCount;
@@ -253,37 +253,37 @@ static void update_rt_advance(struct rds_data* rds,
         byte[i] = ' ';  // translate nulls to spaces.
 
       // The new byte matches the high probability byte.
-      if (rds->rt.hi_prob[addr + i] == byte[i]) {
-        if (rds->rt.hi_prob_cnt[addr + i] < RT_VALIDATE_LIMIT) {
-          rds->rt.hi_prob_cnt[addr + i]++;
+      if (rds->rt.pvt.hi_prob[addr + i] == byte[i]) {
+        if (rds->rt.pvt.hi_prob_cnt[addr + i] < RT_VALIDATE_LIMIT) {
+          rds->rt.pvt.hi_prob_cnt[addr + i]++;
         } else {
           // we have received this byte enough to max out our counter and push
           // it into the low probability array as well.
-          rds->rt.hi_prob_cnt[addr + i] = RT_VALIDATE_LIMIT;
-          rds->rt.lo_prob[addr + i] = byte[i];
+          rds->rt.pvt.hi_prob_cnt[addr + i] = RT_VALIDATE_LIMIT;
+          rds->rt.pvt.lo_prob[addr + i] = byte[i];
         }
-      } else if (rds->rt.lo_prob[addr + i] == byte[i]) {
+      } else if (rds->rt.pvt.lo_prob[addr + i] == byte[i]) {
         // The new byte is a match with the low probability byte. Swap them,
         // reset the counter and flag the text as in transition. Note that the
         // counter for this character goes higher than the validation limit
         // because it will get knocked down later
-        if (rds->rt.hi_prob_cnt[addr + i] >= RT_VALIDATE_LIMIT) {
+        if (rds->rt.pvt.hi_prob_cnt[addr + i] >= RT_VALIDATE_LIMIT) {
           text_changing = true;
-          rds->rt.hi_prob_cnt[addr + i] = RT_VALIDATE_LIMIT + 1;
+          rds->rt.pvt.hi_prob_cnt[addr + i] = RT_VALIDATE_LIMIT + 1;
         } else {
-          rds->rt.hi_prob_cnt[addr + i] = RT_VALIDATE_LIMIT;
+          rds->rt.pvt.hi_prob_cnt[addr + i] = RT_VALIDATE_LIMIT;
         }
-        rds->rt.lo_prob[addr + i] = rds->rt.hi_prob[addr + i];
-        rds->rt.hi_prob[addr + i] = byte[i];
-      } else if (!rds->rt.hi_prob_cnt[addr + i]) {
+        rds->rt.pvt.lo_prob[addr + i] = rds->rt.pvt.hi_prob[addr + i];
+        rds->rt.pvt.hi_prob[addr + i] = byte[i];
+      } else if (!rds->rt.pvt.hi_prob_cnt[addr + i]) {
         // The new byte is replacing an empty byte in the high
         // proability array
-        rds->rt.hi_prob[addr + i] = byte[i];
-        rds->rt.hi_prob_cnt[addr + i] = 1;
+        rds->rt.pvt.hi_prob[addr + i] = byte[i];
+        rds->rt.pvt.hi_prob_cnt[addr + i] = 1;
       } else {
         // The new byte doesn't match anything, put it in the low probability
         // array.
-        rds->rt.lo_prob[addr + i] = byte[i];
+        rds->rt.pvt.lo_prob[addr + i] = byte[i];
       }
     }
   }
@@ -291,9 +291,9 @@ static void update_rt_advance(struct rds_data* rds,
   if (text_changing) {
     // When the text is changing, decrement the count for all characters to
     // prevent displaying part of a message that is in transition.
-    for (i = 0; i < ARRAY_SIZE(rds->rt.hi_prob_cnt); i++) {
-      if (rds->rt.hi_prob_cnt[i] > 1)
-        rds->rt.hi_prob_cnt[i]--;
+    for (i = 0; i < ARRAY_SIZE(rds->rt.pvt.hi_prob_cnt); i++) {
+      if (rds->rt.pvt.hi_prob_cnt[i] > 1)
+        rds->rt.pvt.hi_prob_cnt[i]--;
     }
   }
 }
@@ -319,52 +319,52 @@ static void update_ps_advanced(struct rds_data* rds,
   bool in_transition = false;  ///< Indicates if the PS text is in transition.
   bool complete = true;  ///< Indicates the PS text is ready to be displayed.
 
-  if (rds->ps.hi_prob[char_idx] == byte) {
+  if (rds->ps.pvt.hi_prob[char_idx] == byte) {
     // The new byte matches the high probability byte.
-    if (rds->ps.hi_prob_cnt[char_idx] < PS_VALIDATE_LIMIT) {
-      rds->ps.hi_prob_cnt[char_idx]++;
+    if (rds->ps.pvt.hi_prob_cnt[char_idx] < PS_VALIDATE_LIMIT) {
+      rds->ps.pvt.hi_prob_cnt[char_idx]++;
     } else {
       // we have received this byte enough to max out our counter and push it
       // into the low probability array as well.
-      rds->ps.hi_prob_cnt[char_idx] = PS_VALIDATE_LIMIT;
-      rds->ps.lo_prob[char_idx] = byte;
+      rds->ps.pvt.hi_prob_cnt[char_idx] = PS_VALIDATE_LIMIT;
+      rds->ps.pvt.lo_prob[char_idx] = byte;
     }
-  } else if (rds->ps.lo_prob[char_idx] == byte) {
+  } else if (rds->ps.pvt.lo_prob[char_idx] == byte) {
     // The new byte is a match with the low probability byte. Swap them, reset
     // the counter and flag the text as in transition. Note that the counter for
     // this character goes higher than the validation limit because it will get
     // knocked down later.
-    if (rds->ps.hi_prob_cnt[char_idx] >= PS_VALIDATE_LIMIT) {
+    if (rds->ps.pvt.hi_prob_cnt[char_idx] >= PS_VALIDATE_LIMIT) {
       in_transition = true;
-      rds->ps.hi_prob_cnt[char_idx] = PS_VALIDATE_LIMIT + 1;
+      rds->ps.pvt.hi_prob_cnt[char_idx] = PS_VALIDATE_LIMIT + 1;
     } else {
-      rds->ps.hi_prob_cnt[char_idx] = PS_VALIDATE_LIMIT;
+      rds->ps.pvt.hi_prob_cnt[char_idx] = PS_VALIDATE_LIMIT;
     }
-    rds->ps.lo_prob[char_idx] = rds->ps.hi_prob[char_idx];
-    rds->ps.hi_prob[char_idx] = byte;
-  } else if (!rds->ps.hi_prob_cnt[char_idx]) {
+    rds->ps.pvt.lo_prob[char_idx] = rds->ps.pvt.hi_prob[char_idx];
+    rds->ps.pvt.hi_prob[char_idx] = byte;
+  } else if (!rds->ps.pvt.hi_prob_cnt[char_idx]) {
     // The new byte is replacing an empty byte in the high probability array.
-    rds->ps.hi_prob[char_idx] = byte;
-    rds->ps.hi_prob_cnt[char_idx] = 1;
+    rds->ps.pvt.hi_prob[char_idx] = byte;
+    rds->ps.pvt.hi_prob_cnt[char_idx] = 1;
   } else {
     // The new byte doesn't match anything, put it in the low probability array.
-    rds->ps.lo_prob[char_idx] = byte;
+    rds->ps.pvt.lo_prob[char_idx] = byte;
   }
 
   if (in_transition) {
     // When the text is changing, decrement the count for all characters to
     // prevent displaying part of a message that is in transition.
-    for (i = 0; i < ARRAY_SIZE(rds->ps.hi_prob_cnt); i++) {
-      if (rds->ps.hi_prob_cnt[i] > 1) {
-        rds->ps.hi_prob_cnt[i]--;
+    for (i = 0; i < ARRAY_SIZE(rds->ps.pvt.hi_prob_cnt); i++) {
+      if (rds->ps.pvt.hi_prob_cnt[i] > 1) {
+        rds->ps.pvt.hi_prob_cnt[i]--;
       }
     }
   }
 
   // The PS text is incomplete if any character in the high probability array
   // has been seen fewer times than the validation limit.
-  for (i = 0; i < ARRAY_SIZE(rds->ps.hi_prob_cnt); i++) {
-    if (rds->ps.hi_prob_cnt[i] < PS_VALIDATE_LIMIT) {
+  for (i = 0; i < ARRAY_SIZE(rds->ps.pvt.hi_prob_cnt); i++) {
+    if (rds->ps.pvt.hi_prob_cnt[i] < PS_VALIDATE_LIMIT) {
       complete = false;
       break;
     }
@@ -374,7 +374,7 @@ static void update_ps_advanced(struct rds_data* rds,
   // display array.
   if (complete) {
     SET_BITS(rds->valid_values, RDS_PS);
-    memcpy(rds->ps.display, rds->ps.hi_prob, sizeof(rds->ps.hi_prob));
+    memcpy(rds->ps.display, rds->ps.pvt.hi_prob, sizeof(rds->ps.pvt.hi_prob));
   }
 }
 
@@ -585,9 +585,9 @@ static void decode_group_type_2(const struct rds_decoder* decoder,
 
     // The last 32 bytes are unused in this format.
     decoder->rds->rt.display[32] = 0x0d;
-    decoder->rds->rt.hi_prob[32] = 0x0d;
-    decoder->rds->rt.lo_prob[32] = 0x0d;
-    decoder->rds->rt.hi_prob_cnt[32] = RT_VALIDATE_LIMIT;
+    decoder->rds->rt.pvt.hi_prob[32] = 0x0d;
+    decoder->rds->rt.pvt.lo_prob[32] = 0x0d;
+    decoder->rds->rt.pvt.hi_prob_cnt[32] = RT_VALIDATE_LIMIT;
 
     update_rt_simple(decoder->rds, blocks, abflag, 2, addr, rtblocks);
     update_rt_advance(decoder->rds, blocks, abflag, 2, addr, rtblocks);

@@ -272,22 +272,26 @@ struct rds_data {
 
   // Note: NONE of the strings in this structure are null terminated!
   struct {
-    uint8_t display[8];      ///< PS text to display.
-    uint8_t hi_prob[8];      ///< Temporary PS text (high probability).
-    uint8_t lo_prob[8];      ///< Temporary PS text (low probability).
-    uint8_t hi_prob_cnt[8];  ///< Hit count of high probability PS text.
-  } ps;                      ///< The Program Service data.
+    uint8_t display[8];  ///< PS text to display.
+    struct {
+      uint8_t hi_prob[8];      ///< Temporary PS text (high probability).
+      uint8_t lo_prob[8];      ///< Temporary PS text (low probability).
+      uint8_t hi_prob_cnt[8];  ///< Hit count of high probability PS text.
+    } pvt;                     ///< PS decoder private data.
+  } ps;                        ///< The Program Service data.
 
   struct {
-    uint8_t display[64];      ///< Radiotext text to display.
-    uint8_t hi_prob[64];      ///< Temporary Radiotext (high probability).
-    uint8_t lo_prob[64];      ///< Temporary Radiotext (low probability).
-    uint8_t hi_prob_cnt[64];  ///< Hit count of high probability Radiotext.
-    bool flag;                ///< Radiotext A/B flag.
-    bool flag_valid;          ///< Radiotext A/B flag is valid.
-    bool saved_flag;          ///< Saved Radiotext A/B flag.
-    bool saved_flag_valid;    ///< Saved Radiotext A/B flag is valid.
-  } rt;                       ///< The Radiotext data.
+    uint8_t display[64];  ///< Radiotext text to display.
+    struct {
+      uint8_t hi_prob[64];      ///< Temporary Radiotext (high probability).
+      uint8_t lo_prob[64];      ///< Temporary Radiotext (low probability).
+      uint8_t hi_prob_cnt[64];  ///< Hit count of high probability Radiotext.
+      bool flag;                ///< Radiotext A/B flag.
+      bool flag_valid;          ///< Radiotext A/B flag is valid.
+      bool saved_flag;          ///< Saved Radiotext A/B flag.
+      bool saved_flag_valid;    ///< Saved Radiotext A/B flag is valid.
+    } pvt;                      ///< RT decoder private data.
+  } rt;                         ///< The Radiotext data.
 
   struct {
     bool day_high;      ///< Modified Julian Day high bit.
