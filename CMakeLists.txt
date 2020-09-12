@@ -41,3 +41,17 @@ target_include_directories(rds
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_compile_options(rds PRIVATE -Werror -Wall -Wextra)
+
+add_executable(rdsstats
+  "util/rds_spy_log_reader.cc"
+  "util/rds_spy_log_reader.h"
+  "util/rdsstats.cc"
+)
+target_include_directories(rdsstats
+  PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/util>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+target_link_libraries(rdsstats rds)
+target_compile_options(rdsstats PRIVATE -Werror -Wall -Wextra)

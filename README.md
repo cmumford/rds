@@ -93,3 +93,11 @@ if (data.valid_values & RDS_PTY) {
 // When no longer used, delete the RDS decoder.
 mgos_rds_decoder_delete(decoder);
 ```
+
+## util
+
+util contains a program, rdsstats, which reads (as input) raw RDS block
+data from [RDS Spy](https://rdsspy.com/), and prints out various statistics.
+There is also a higher-level script, `rds_spy_log_stats.py`, which
+processes an entire directory (recursively) of logs, and writes out
+a CSV file for directory-wide statistics.

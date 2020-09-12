@@ -9,7 +9,10 @@ SOURCE_FILES = \
 		src/freq_table_group.c \
 		src/freq_table_group.h \
 		src/mgos_rds_decoder.c \
-		src/rds_decoder.c
+		src/rds_decoder.c \
+		util/rds_spy_log_reader.cc \
+		util/rds_spy_log_reader.h \
+		util/rdsstats.cc
 
 .PHONY: format
 format:
