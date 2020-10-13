@@ -1,0 +1,30 @@
+{
+    "authors": [
+        {
+            "email": "cmumford@cmumford.com",
+            "name": "Chris Mumford",
+            "url": "https://github.com/cmumford"
+        }
+    ],
+    "build": {
+        "srcFilter": [
+            "+<*.c>",
+            "+<*.h>",
+            "-<mgos_*.c>"
+        ]
+    },
+    "dependencies": {
+    },
+    "description": "A library for decoding RDS/RBDS data",
+    "frameworks": "*",
+    "homepage": "https://github.com/cmumford/rds",
+    "keywords": "FM, RDS, RBDS, radio",
+    "license": "Apache2",
+    "name": "rds",
+    "platforms": "*",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/cmumford/rds"
+    },
+    "version": "0.8.0"
+}
