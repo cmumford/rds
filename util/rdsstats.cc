@@ -65,7 +65,7 @@ void PrintStats(const rds_data& rds_data, const ODAStats& oda_stats) {
   cout << "RDS-TMC: " << oda_stats.tmc_cnt << endl;
   cout << "iTunes: " << oda_stats.itunes_cnt << endl;
 #else
-  UNUSED(f);
+  UNUSED(rds_data);
   UNUSED(oda_stats);
 #endif
 }

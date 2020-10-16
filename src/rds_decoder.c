@@ -23,6 +23,11 @@
 #include "freq_table.h"
 #include "freq_table_group.h"
 
+#define UNUSED(expr) \
+  do {               \
+    (void)(expr);    \
+  } while (0)
+
 #if !defined(SET_BITS)
 #define SET_BITS(value, bits) (value |= (bits))
 #endif
@@ -1074,6 +1079,8 @@ static void decode_fast_basic_tuning(const struct rds_decoder* decoder,
                                      const struct rds_blocks* blocks) {
 #if defined(RDS_DEV)
   decoder->rds->stats.counts[PKTCNT_FBT]++;
+#else
+  UNUSED(decoder);
 #endif
   if (blocks->d.errors > BLERD_MAX)
     return;
