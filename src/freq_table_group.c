@@ -19,6 +19,7 @@
 #include <stddef.h>
 
 #include "freq_table.h"
+#include "rds_misc.h"
 
 /**
  * Find a table if the table's tuned frequency matches `tuned_freq`.

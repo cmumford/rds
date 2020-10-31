@@ -20,6 +20,7 @@
 #include <string.h>
 
 #include <rds_decoder.h>
+#include "rds_misc.h"
 
 // See table 12 in RBDS spec section 3.2.1.6.1.
 static const uint8_t AF_MIN_FREQ_CODE = 1;

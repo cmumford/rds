@@ -29,10 +29,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#if !defined(ARRAY_SIZE)
-#define ARRAY_SIZE(ARRAY) (sizeof(ARRAY) / sizeof((ARRAY)[0]))
-#endif
-
 /**
  * Define this constant to expose data used during library development.
  */

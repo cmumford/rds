@@ -22,19 +22,7 @@
 
 #include "freq_table.h"
 #include "freq_table_group.h"
-
-#define UNUSED(expr) \
-  do {               \
-    (void)(expr);    \
-  } while (0)
-
-#if !defined(SET_BITS)
-#define SET_BITS(value, bits) (value |= (bits))
-#endif
-
-#if !defined(CLEAR_BITS)
-#define CLEAR_BITS(value, bits) (value &= ~(bits))
-#endif
+#include "rds_misc.h"
 
 // clang-format off
 
