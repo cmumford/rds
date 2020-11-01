@@ -22,6 +22,10 @@
 
 #include <rds_decoder.h>
 
+#if !defined(ARRAY_SIZE)
+#define ARRAY_SIZE(ARRAY) (sizeof(ARRAY) / sizeof((ARRAY)[0]))
+#endif
+
 namespace {
 
 /**
