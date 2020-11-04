@@ -268,6 +268,14 @@ enum rds_rt_text {
   RT_B,  ///< RT block B is current.
 };
 
+struct rds_clock_t {
+  bool day_high;      ///< Modified Julian Day high bit.
+  uint16_t day_low;   ///< Modified Julian Day low 16 bits.
+  uint8_t hour;       ///< Hour (UTC).
+  uint8_t minute;     ///< Minute (UTC).
+  int8_t utc_offset;  ///< Local Time Offset from UTC in multiples of 1/2 hrs.
+};
+
 /**
  * RDS (Radio Data System) data.
  *
@@ -299,13 +307,7 @@ struct rds_data {
     enum rds_rt_text decode_rt;  ///< Which RT text currently being decoded.
   } rt;                          ///< The Radiotext data.
 
-  struct {
-    bool day_high;      ///< Modified Julian Day high bit.
-    uint16_t day_low;   ///< Modified Julian Day low 16 bits.
-    uint8_t hour;       ///< Hour (UTC).
-    uint8_t minute;     ///< Minute (UTC).
-    int8_t utc_offset;  ///< Local Time Offset from UTC in multiples of 1/2 hrs.
-  } clock;              ///< The clock time (current broadcast time).
+  struct rds_clock_t clock;  ///< The clock time (current broadcast time).
 
   struct {
     bool la;  ///< Linkage Actuator. RDSM spec. (3.2.1.8.3).
