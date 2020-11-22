@@ -137,8 +137,8 @@ enum rds_values {
   RDS_EWS     = 0x00004,
   RDS_FBT     = 0x00008,
   RDS_MC      = 0x00010,
-  RDS_PIC     = 0x00020,
-  RDS_PI_CODE = 0x00040,
+  RDS_PIC     = 0x00020, ///< Program item number code.
+  RDS_PI_CODE = 0x00040, ///< Program identification code.
   RDS_PS      = 0x00080,
   RDS_PTY     = 0x00100,
   RDS_PTYN    = 0x00200,
